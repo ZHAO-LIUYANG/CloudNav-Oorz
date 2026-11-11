@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="https://lucide.dev/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0D0B1E" />
     <title></title>
+
+    <!-- 站点配置（标题 / 图标）启动脚本，沿用云端 website_config -->
     <script>
       (function () {
         function applyRoundedFavicon(source) {
@@ -20,7 +23,6 @@
               canvas.height = size;
               var ctx = canvas.getContext('2d');
               if (!ctx) return;
-
               ctx.beginPath();
               ctx.moveTo(radius, 0);
               ctx.lineTo(size - radius, 0);
@@ -34,18 +36,13 @@
               ctx.closePath();
               ctx.clip();
               ctx.drawImage(img, 0, 0, size, size);
-
               var favicon = document.querySelector('link[rel="icon"]');
-              if (favicon) {
-                favicon.href = canvas.toDataURL('image/png');
-              }
+              if (favicon) favicon.href = canvas.toDataURL('image/png');
             } catch (e) {}
           };
           img.onerror = function () {
             var favicon = document.querySelector('link[rel="icon"]');
-            if (favicon) {
-              favicon.href = source;
-            }
+            if (favicon) favicon.href = source;
           };
           img.src = source;
         }
@@ -53,7 +50,6 @@
         try {
           const saved = localStorage.getItem('cloudnav_site_settings');
           let settings = saved ? JSON.parse(saved) : null;
-
           if (!settings) {
             const req = new XMLHttpRequest();
             req.open('GET', '/api/storage?getConfig=website', false);
@@ -63,66 +59,637 @@
               localStorage.setItem('cloudnav_site_settings', JSON.stringify(settings));
             }
           }
-
-          if (settings && settings.title) {
-            document.title = settings.title;
-          }
-          if (settings && settings.favicon) {
-            applyRoundedFavicon(settings.favicon);
-          }
+          if (settings && settings.title) document.title = settings.title;
+          if (settings && settings.favicon) applyRoundedFavicon(settings.favicon);
         } catch (e) {}
       })();
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              primary: '#3b82f6',
-              secondary: '#64748b',
-              dark: '#0f172a',
-              card: '#1e293b',
-            }
-          }
-        }
-      }
-    </script>
+
     <style>
+      :root {
+        --bg: #0d0b1e;
+        --fg: #f4f3ff;
+        --muted: rgba(244, 243, 255, 0.55);
+        --dim: rgba(244, 243, 255, 0.35);
+        --line: rgba(165, 180, 252, 0.26);
+        --line-strong: rgba(165, 180, 252, 0.55);
+        --card: rgba(255, 255, 255, 0.06);
+        --card-hover: rgba(255, 255, 255, 0.09);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { margin: 0; padding: 0; }
+
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+          'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+        color: var(--fg);
+        background-color: var(--bg);
+        /* 静态极光渐变（不做任何漂移动画） */
+        background-image:
+          radial-gradient(60% 72% at 15% 0%, rgba(52, 211, 153, 0.20), transparent 62%),
+          radial-gradient(55% 68% at 85% 12%, rgba(129, 140, 248, 0.26), transparent 62%),
+          radial-gradient(62% 58% at 50% 112%, rgba(236, 72, 153, 0.14), transparent 60%);
+        background-attachment: fixed;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        font-size: 14px;
       }
-      /* Custom scrollbar for sidebar */
-      .scrollbar-hide::-webkit-scrollbar {
-          display: none;
+
+      .top {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: rgba(13, 11, 30, 0.86);
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--line);
       }
-      .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
+
+      .header-in {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 12px 20px;
       }
-      /* Simple CSS-only tooltip transition */
-      .tooltip-custom {
-          transition: opacity 0.2s, visibility 0.2s;
-          pointer-events: none;
+
+      .brand {
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        white-space: nowrap;
+      }
+
+      .search {
+        position: relative;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .search .ico-search {
+        position: absolute;
+        left: 12px;
+        opacity: 0.45;
+        pointer-events: none;
+        display: flex;
+      }
+
+      #q {
+        width: 100%;
+        padding: 9px 38px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--fg);
+        font-size: 16px;
+        outline: none;
+        font-family: inherit;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      #q::placeholder { color: var(--dim); }
+      #q::-webkit-search-cancel-button { display: none; }
+
+      #q:focus {
+        border-color: var(--line-strong);
+        box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.12);
+      }
+
+      .clear {
+        position: absolute;
+        right: 8px;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 13px;
+        padding: 6px;
+        display: none;
+        font-family: inherit;
+      }
+
+      .clear:hover { color: var(--fg); }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--fg);
+        font-size: 12px;
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+      }
+
+      .btn:hover { background: rgba(255, 255, 255, 0.10); }
+
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 10px 20px;
+        scrollbar-width: none;
+      }
+
+      .chips::-webkit-scrollbar { display: none; }
+
+      .chip {
+        flex: 0 0 auto;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-family: inherit;
+      }
+
+      .chip:hover { color: var(--fg); background: rgba(255, 255, 255, 0.08); }
+
+      .chip.on {
+        color: var(--fg);
+        background: rgba(255, 255, 255, 0.10);
+        border-color: var(--line);
+      }
+
+      .chip .n {
+        font-size: 11px;
+        opacity: 0.55;
+        margin-left: 6px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 18px 20px 64px;
+      }
+
+      .count {
+        color: var(--muted);
+        font-size: 12px;
+        margin: 2px 2px 12px;
+        min-height: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 14px;
+        border-radius: 14px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        text-decoration: none;
+        color: inherit;
+        /* 动效仅此一处：hover 上浮 + 边框提亮 */
+        transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-2px);
+        border-color: var(--line-strong);
+        background: var(--card-hover);
+      }
+
+      /* 动效仅此一处：搜索过滤淡入 */
+      .card.filter-in { animation: fadeUp 0.18s ease-out both; }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .card { transition: none; }
+        .card:hover { transform: none; }
+        .card.filter-in { animation: none; }
+      }
+
+      .ico {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(52, 211, 153, 0.16), rgba(129, 140, 248, 0.30));
+        border: 1px solid rgba(165, 180, 252, 0.18);
+        overflow: hidden;
+        font-weight: 600;
+        font-size: 16px;
+        color: var(--fg);
+      }
+
+      .ico img { width: 24px; height: 24px; object-fit: contain; }
+
+      .ico .fb {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        font-size: 16px;
+      }
+
+      .body { min-width: 0; flex: 1; }
+
+      .t {
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.35;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .d {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 3px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .desc {
+        font-size: 12px;
+        line-height: 1.5;
+        color: rgba(244, 243, 255, 0.62);
+        margin-top: 7px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .empty {
+        text-align: center;
+        padding: 90px 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      #login {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(13, 11, 30, 0.86);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+      }
+
+      #login[hidden] { display: none; }
+
+      .lc {
+        width: min(360px, 88vw);
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .lc h2 { margin: 0; font-size: 16px; font-weight: 600; }
+
+      .lc p { margin: 0; font-size: 12px; color: var(--muted); }
+
+      .lc input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--fg);
+        font-size: 16px;
+        outline: none;
+        font-family: inherit;
+      }
+
+      .lc input:focus {
+        border-color: var(--line-strong);
+        box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.12);
+      }
+
+      .lc .err { font-size: 12px; color: #fda4af; min-height: 16px; }
+
+      .lc .btn { justify-content: center; padding: 10px; font-size: 14px; }
+
+      @media (max-width: 640px) {
+        .header-in { padding: 10px 14px; gap: 10px; }
+        .brand { font-size: 13px; }
+        .chips { padding: 8px 14px; }
+        main { padding: 14px 14px 56px; }
+        .grid { grid-template-columns: 1fr; }
+        .btn .lbl { display: none; }
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "buffer": "https://aistudiocdn.com/buffer@^6.0.3"
-  }
-}
-</script>
-</head>
-  <body class="bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 transition-colors duration-300">
-    <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+  </head>
+  <body>
+    <div class="top">
+      <div class="header-in">
+        <div class="brand" id="brand">LINGYING</div>
+        <div class="search">
+          <span class="ico-search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f4f3ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+          </span>
+          <input id="q" type="search" placeholder="搜索名称 / 域名 / 描述" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <button class="clear" id="clear" type="button" aria-label="清空搜索">✕</button>
+        </div>
+        <button class="btn" id="exportBtn" type="button" title="导出 JSON">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span class="lbl">导出</span>
+        </button>
+      </div>
+      <nav class="chips" id="chips"></nav>
+    </div>
+
+    <main>
+      <div class="count" id="count"></div>
+      <div class="grid" id="grid"></div>
+      <div class="empty" id="empty" hidden>没有匹配的书签</div>
+    </main>
+
+    <div id="login" hidden>
+      <form class="lc" id="loginForm" autocomplete="on">
+        <h2>访问密码</h2>
+        <p>输入密码以查看书签</p>
+        <input id="pwd" type="password" autocomplete="current-password" placeholder="密码" />
+        <div class="err" id="loginErr"></div>
+        <button class="btn" id="loginBtn" type="submit">进入</button>
+      </form>
+    </div>
+
+    <script type="module">
+      const $ = (sel, root = document) => root.querySelector(sel);
+
+      const state = {
+        links: [],
+        categories: [],
+        active: 'all',
+        q: '',
+        pwd: localStorage.getItem('cn_pwd') || '',
+        issued: localStorage.getItem('cn_pwd_at') || ''
+      };
+
+      const els = {
+        brand: $('#brand'),
+        q: $('#q'),
+        clear: $('#clear'),
+        grid: $('#grid'),
+        chips: $('#chips'),
+        count: $('#count'),
+        empty: $('#empty'),
+        exportBtn: $('#exportBtn'),
+        login: $('#login'),
+        pwd: $('#pwd'),
+        loginErr: $('#loginErr'),
+        loginForm: $('#loginForm'),
+        loginBtn: $('#loginBtn')
+      };
+
+      const esc = (s) =>
+        String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+
+      function host(url) {
+        try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+      }
+
+      function fallbackChar(link) {
+        const t = (link.title || '').trim();
+        const first = t ? Array.from(t)[0] : '';
+        if (first) return /[a-z]/.test(first) ? first.toUpperCase() : first;
+        const h = host(link.url);
+        return h ? h.charAt(0).toUpperCase() : '书';
+      }
+
+      function authHeaders() {
+        const h = {};
+        if (state.pwd) h['x-auth-password'] = state.pwd;
+        if (state.pwd && state.issued) h['x-auth-issued-at'] = state.issued;
+        return h;
+      }
+
+      function showLogin(message) {
+        els.login.hidden = false;
+        els.loginErr.textContent = message || '';
+        setTimeout(() => { try { els.pwd.focus(); } catch (e) {} }, 30);
+      }
+
+      function hideLogin() {
+        els.login.hidden = true;
+        els.loginErr.textContent = '';
+        els.pwd.value = '';
+      }
+
+      async function load() {
+        els.count.textContent = '加载中…';
+        els.grid.innerHTML = '';
+        els.empty.hidden = true;
+        try {
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) {
+            showLogin('密码错误或已过期，请重新输入');
+            return;
+          }
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          state.links = Array.isArray(data.links) ? data.links : [];
+          state.categories = Array.isArray(data.categories) ? data.categories : [];
+          hideLogin();
+          renderChips();
+          renderCards(false);
+        } catch (e) {
+          els.count.textContent = '加载失败：' + e.message;
+          els.grid.innerHTML = '';
+        }
+      }
+
+      function renderChips() {
+        const counts = {};
+        state.links.forEach((l) => { counts[l.categoryId] = (counts[l.categoryId] || 0) + 1; });
+        const items = [{ id: 'all', name: '全部', n: state.links.length }].concat(
+          state.categories.map((c) => ({ id: c.id, name: c.name, n: counts[c.id] || 0 }))
+        );
+        els.chips.innerHTML = items
+          .map((c) => {
+            const on = state.active === c.id ? ' on' : '';
+            return `<button class="chip${on}" data-id="${esc(c.id)}" type="button">${esc(c.name)}<span class="n">${c.n}</span></button>`;
+          })
+          .join('');
+      }
+
+      function cardHtml(link, animate) {
+        const ch = fallbackChar(link);
+        const h = host(link.url);
+        const icon = link.icon || (h ? 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(h) + '&sz=64' : '');
+        const img = icon
+          ? `<img src="${esc(icon)}" alt="" loading="lazy" decoding="async" onerror="this.remove();this.parentNode.querySelector('.fb').style.display='flex'">`
+          : '';
+        return `<a class="card${animate ? ' filter-in' : ''}" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">
+          <div class="ico">${img}<span class="fb" style="${icon ? 'display:none' : 'display:flex'}">${esc(ch)}</span></div>
+          <div class="body">
+            <div class="t">${esc(link.title || link.url)}</div>
+            <div class="d">${esc(h)}</div>
+            ${link.description ? `<div class="desc">${esc(link.description)}</div>` : ''}
+          </div>
+        </a>`;
+      }
+
+      function renderCards(animate) {
+        const q = state.q.trim().toLowerCase();
+        const visible = state.links.filter((l) => {
+          if (state.active !== 'all' && l.categoryId !== state.active) return false;
+          if (!q) return true;
+          return (
+            (l.title || '').toLowerCase().includes(q) ||
+            (l.url || '').toLowerCase().includes(q) ||
+            (l.description || '').toLowerCase().includes(q)
+          );
+        });
+
+        els.clear.style.display = state.q ? 'block' : 'none';
+
+        const catName =
+          state.active === 'all'
+            ? '全部'
+            : (state.categories.find((c) => c.id === state.active) || {}).name || '';
+        els.count.textContent = `${visible.length} 条 · ${catName}`;
+
+        if (!visible.length) {
+          els.grid.innerHTML = '';
+          els.empty.hidden = false;
+          return;
+        }
+
+        els.empty.hidden = true;
+        els.grid.innerHTML = visible.map((l) => cardHtml(l, animate)).join('');
+      }
+
+      // 搜索：实时过滤（唯一允许的过滤动效）
+      els.q.addEventListener('input', () => {
+        state.q = els.q.value;
+        renderCards(state.q.trim().length > 0);
+      });
+
+      els.clear.addEventListener('click', () => {
+        els.q.value = '';
+        state.q = '';
+        renderCards(false);
+        els.q.focus();
+      });
+
+      els.chips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip) return;
+        state.active = chip.dataset.id || 'all';
+        renderChips();
+        renderCards(false);
+      });
+
+      els.loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pwd = els.pwd.value;
+        if (!pwd) return;
+        els.loginBtn.disabled = true;
+        els.loginErr.textContent = '验证中…';
+        try {
+          const res = await fetch('/api/storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-auth-password': pwd },
+            body: JSON.stringify({ authOnly: true })
+          });
+          if (!res.ok) {
+            els.loginErr.textContent = res.status === 401 ? '密码错误，请重试' : '验证失败（' + res.status + '）';
+            return;
+          }
+          const data = await res.json();
+          state.pwd = pwd;
+          state.issued = String(data.authenticatedAt || Date.now());
+          localStorage.setItem('cn_pwd', state.pwd);
+          localStorage.setItem('cn_pwd_at', state.issued);
+          els.loginErr.textContent = '';
+          load();
+        } catch (err) {
+          els.loginErr.textContent = '网络错误：' + err.message;
+        } finally {
+          els.loginBtn.disabled = false;
+        }
+      });
+
+      els.exportBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) { showLogin('密码错误或已过期，请重新输入'); return; }
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          const payload = { links: data.links || [], categories: data.categories || [], exportedAt: new Date().toISOString() };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const a = document.createElement('a');
+          const d = new Date();
+          const stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+          a.href = URL.createObjectURL(blob);
+          a.download = (els.brand.textContent || 'bookmarks').replace(/\s+/g, '-') + '-' + stamp + '.json';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        } catch (err) {
+          alert('导出失败：' + err.message);
+        }
+      });
+
+      (async function init() {
+        try {
+          const r = await fetch('/api/storage?getConfig=website');
+          if (r.ok) {
+            const cfg = await r.json();
+            const name = cfg.navTitle || cfg.title;
+            if (name) { els.brand.textContent = name; document.title = cfg.title || name; }
+          }
+        } catch (e) {}
+
+        let requiresAuth = false;
+        try {
+          const r = await fetch('/api/storage?checkAuth=true');
+          if (r.ok) {
+            const j = await r.json();
+            requiresAuth = !!j.requiresAuth;
+          }
+        } catch (e) {}
+
+        if (requiresAuth && !state.pwd) {
+          showLogin('');
+          return;
+        }
+        load();
+      })();
+    </script>
+  </body>
 </html>
