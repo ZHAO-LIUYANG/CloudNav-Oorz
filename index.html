@@ -193,14 +193,45 @@
 
       .btn:hover { background: rgba(255, 255, 255, 0.10); }
 
+      .chips-wrap {
+        position: relative;
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+
       .chips {
         display: flex;
         gap: 8px;
         overflow-x: auto;
-        max-width: 1180px;
-        margin: 0 auto;
-        padding: 10px 20px;
+        padding: 10px 34px;
         scrollbar-width: none;
+      }
+
+      .scrolly {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: rgba(13, 11, 30, 0.92);
+        color: var(--muted);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 2;
+      }
+
+      .scrolly.show { display: flex; }
+      .scrolly:hover { color: var(--fg); border-color: var(--line-strong); }
+      .scrolly.l { left: 4px; }
+      .scrolly.r { right: 4px; }
+
+      @media (max-width: 640px) {
+        .scrolly { display: none !important; }
       }
 
       .chips::-webkit-scrollbar { display: none; }
@@ -248,7 +279,7 @@
 
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 12px;
       }
 
@@ -287,10 +318,10 @@
       }
 
       .ico {
-        width: 42px;
-        height: 42px;
-        flex: 0 0 42px;
-        border-radius: 11px;
+        width: 168px;
+        height: 168px;
+        flex: 0 0 168px;
+        border-radius: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -298,11 +329,11 @@
         border: 1px solid rgba(165, 180, 252, 0.18);
         overflow: hidden;
         font-weight: 600;
-        font-size: 16px;
+        font-size: 56px;
         color: var(--fg);
       }
 
-      .ico img { width: 24px; height: 24px; object-fit: contain; }
+      .ico img { width: 96px; height: 96px; object-fit: contain; }
 
       .ico .fb {
         display: none;
@@ -310,7 +341,7 @@
         justify-content: center;
         width: 100%;
         height: 100%;
-        font-size: 16px;
+        font-size: 56px;
       }
 
       .body { min-width: 0; flex: 1; }
@@ -426,7 +457,15 @@
           <span class="lbl">导出</span>
         </button>
       </div>
-      <nav class="chips" id="chips"></nav>
+      <nav class="chips-wrap">
+        <button class="scrolly l" id="chipsLeft" type="button" aria-label="向左滚动分类" title="向左">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="chips" id="chips"></div>
+        <button class="scrolly r" id="chipsRight" type="button" aria-label="向右滚动分类" title="向右">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </nav>
     </div>
 
     <main>
@@ -463,6 +502,8 @@
         clear: $('#clear'),
         grid: $('#grid'),
         chips: $('#chips'),
+        chipsLeft: $('#chipsLeft'),
+        chipsRight: $('#chipsRight'),
         count: $('#count'),
         empty: $('#empty'),
         exportBtn: $('#exportBtn'),
@@ -544,6 +585,7 @@
             return `<button class="chip${on}" data-id="${esc(c.id)}" type="button">${esc(c.name)}<span class="n">${c.n}</span></button>`;
           })
           .join('');
+        requestAnimationFrame(updateScrollButtons);
       }
 
       function cardHtml(link, animate) {
@@ -613,6 +655,26 @@
         renderChips();
         renderCards(false);
       });
+
+      function updateScrollButtons() {
+        const el = els.chips;
+        const overflow = el.scrollWidth > el.clientWidth + 2;
+        const atStart = el.scrollLeft <= 2;
+        const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+        els.chipsLeft.classList.toggle('show', overflow && !atStart);
+        els.chipsRight.classList.toggle('show', overflow && !atEnd);
+      }
+
+      function scrollChips(dir) {
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const step = Math.max(180, Math.round(els.chips.clientWidth * 0.7));
+        els.chips.scrollBy({ left: dir * step, behavior: reduced ? 'auto' : 'smooth' });
+      }
+
+      els.chipsLeft.addEventListener('click', () => scrollChips(-1));
+      els.chipsRight.addEventListener('click', () => scrollChips(1));
+      els.chips.addEventListener('scroll', updateScrollButtons, { passive: true });
+      window.addEventListener('resize', updateScrollButtons);
 
       els.loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
