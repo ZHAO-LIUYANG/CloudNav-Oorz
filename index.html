@@ -193,6 +193,16 @@
 
       .btn:hover { background: rgba(255, 255, 255, 0.10); }
 
+      .btn.danger {
+        color: #fda4af;
+        border-color: rgba(253, 164, 175, 0.35);
+      }
+
+      .btn.danger:hover {
+        background: rgba(253, 164, 175, 0.10);
+        border-color: rgba(253, 164, 175, 0.6);
+      }
+
       .chips-wrap {
         position: relative;
         max-width: 1180px;
@@ -401,7 +411,6 @@
       }
 
       .go {
-        margin-left: auto;
         font-size: 11px;
         padding: 4px 10px;
         border-radius: 8px;
@@ -409,6 +418,57 @@
         background: rgba(255, 255, 255, 0.05);
         color: var(--fg);
         white-space: nowrap;
+        text-decoration: none;
+      }
+
+      .tools {
+        margin-left: auto;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .move {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--muted);
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+      }
+
+      .move:hover { color: var(--fg); border-color: var(--line-strong); }
+
+      .del {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--muted);
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+      }
+
+      .del:hover { color: #fda4af; border-color: rgba(253, 164, 175, 0.5); }
+
+      .card:focus-visible {
+        outline: 2px solid var(--line-strong);
+        outline-offset: 2px;
+      }
+
+      .card.dragging { opacity: 0.45; }
+
+      .chip.drop-over {
+        color: var(--fg);
+        background: rgba(165, 180, 252, 0.18);
+        border-color: var(--line-strong);
+        outline: 2px dashed var(--line-strong);
+        outline-offset: 2px;
       }
 
       .card:hover .go {
@@ -423,7 +483,10 @@
         font-size: 13px;
       }
 
-      #login {
+      #login,
+      #catModal,
+      #moveModal,
+      #renameModal {
         position: fixed;
         inset: 0;
         z-index: 50;
@@ -435,7 +498,10 @@
         backdrop-filter: blur(10px);
       }
 
-      #login[hidden] { display: none; }
+      #login[hidden],
+      #catModal[hidden],
+      #moveModal[hidden],
+      #renameModal[hidden] { display: none; }
 
       .lc {
         width: min(360px, 88vw);
@@ -468,6 +534,22 @@
         box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.12);
       }
 
+      .lc select {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--fg);
+        font-size: 14px;
+        outline: none;
+        font-family: inherit;
+      }
+
+      .lc select option {
+        background: #16132b;
+        color: #f4f3ff;
+      }
+
       .lc .err { font-size: 12px; color: #fda4af; min-height: 16px; }
 
       .lc .btn { justify-content: center; padding: 10px; font-size: 14px; }
@@ -497,6 +579,10 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           <span class="lbl">导出</span>
         </button>
+        <button class="btn" id="addCatBtn" type="button" title="新建分类">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span class="lbl">分类</span>
+        </button>
       </div>
       <nav class="chips-wrap">
         <button class="scrolly l" id="chipsLeft" type="button" aria-label="向左滚动分类" title="向左">
@@ -525,6 +611,46 @@
       </form>
     </div>
 
+    <div id="catModal" hidden>
+      <form class="lc" id="catForm" autocomplete="off">
+        <h2>新建分类</h2>
+        <p>创建后会出现在顶部导航，可随时把书签移进来</p>
+        <input id="catName" maxlength="20" placeholder="例如：待读、工作待办" />
+        <div class="err" id="catErr"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" id="catCancel" type="button">取消</button>
+          <button class="btn" id="catCreate" type="submit">创建</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="moveModal" hidden>
+      <form class="lc" id="moveForm">
+        <h2>移动到分类</h2>
+        <p id="moveLinkName"></p>
+        <select id="moveTarget"></select>
+        <div class="err" id="moveErr"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" id="moveCancel" type="button">取消</button>
+          <button class="btn" id="moveConfirm" type="submit">移动</button>
+        </div>
+      </form>
+    </div>
+
+        <div id="renameModal" hidden>
+      <form class="lc" id="renameForm" autocomplete="off">
+        <h2>重命名分类</h2>
+        <p>只改显示名称，里面的书签不受影响</p>
+        <input id="renameName" maxlength="20" />
+        <div class="err" id="renameErr"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center">
+          <button class="btn danger" id="renameDelete" type="button" style="margin-right:auto">删除分类</button>
+          <button class="btn" id="renameCancel" type="button">取消</button>
+          <button class="btn" id="renameSave" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+
     <script type="module">
       const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -533,6 +659,7 @@
         categories: [],
         active: 'all',
         q: '',
+        movingId: null,
         pwd: localStorage.getItem('cn_pwd') || '',
         issued: localStorage.getItem('cn_pwd_at') || ''
       };
@@ -552,7 +679,25 @@
         pwd: $('#pwd'),
         loginErr: $('#loginErr'),
         loginForm: $('#loginForm'),
-        loginBtn: $('#loginBtn')
+        loginBtn: $('#loginBtn'),
+        addCatBtn: $('#addCatBtn'),
+        catModal: $('#catModal'),
+        catForm: $('#catForm'),
+        catName: $('#catName'),
+        catErr: $('#catErr'),
+        catCancel: $('#catCancel'),
+        moveModal: $('#moveModal'),
+        moveForm: $('#moveForm'),
+        moveTarget: $('#moveTarget'),
+        moveErr: $('#moveErr'),
+        moveLinkName: $('#moveLinkName'),
+        moveCancel: $('#moveCancel'),
+        renameModal: $('#renameModal'),
+        renameForm: $('#renameForm'),
+        renameName: $('#renameName'),
+        renameErr: $('#renameErr'),
+        renameCancel: $('#renameCancel'),
+        renameDelete: $('#renameDelete')
       };
 
       const esc = (s) =>
@@ -623,7 +768,8 @@
         els.chips.innerHTML = items
           .map((c) => {
             const on = state.active === c.id ? ' on' : '';
-            return `<button class="chip${on}" data-id="${esc(c.id)}" type="button">${esc(c.name)}<span class="n">${c.n}</span></button>`;
+            const title = c.id === 'all' ? '' : ' title="双击可重命名"';
+            return `<button class="chip${on}" data-id="${esc(c.id)}" type="button"${title}>${esc(c.name)}<span class="n">${c.n}</span></button>`;
           })
           .join('');
         requestAnimationFrame(updateScrollButtons);
@@ -642,15 +788,21 @@
           ...(Array.isArray(link.tags) ? link.tags.map((t) => `<span class="tag">${esc(t)}</span>`) : []),
           link.pinned ? `<span class="tag">置顶</span>` : ''
         ].filter(Boolean).join('');
-        return `<a class="card${animate ? ' filter-in' : ''}" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">
+        return `<div class="card${animate ? ' filter-in' : ''}" data-url="${esc(link.url)}" data-id="${esc(link.id)}" tabindex="0" role="link" draggable="true">
           <div class="ico">${img}<span class="fb" style="${icon ? 'display:none' : 'display:flex'}">${esc(ch)}</span></div>
           <div class="body">
             <div class="t">${esc(link.title || link.url)}</div>
             <div class="d">${esc(h)}</div>
             ${link.description ? `<div class="desc">${esc(link.description)}</div>` : ''}
-            <div class="tags">${tags}<span class="go">直达 →</span></div>
+            <div class="tags">${tags}
+              <span class="tools">
+                <a class="go" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">直达 →</a>
+                <button class="move" type="button" data-id="${esc(link.id)}">移动</button>
+                <button class="del" type="button" data-id="${esc(link.id)}">删除</button>
+              </span>
+            </div>
           </div>
-        </a>`;
+        </div>`;
       }
 
       function renderCards(animate) {
@@ -752,6 +904,348 @@
         } finally {
           els.loginBtn.disabled = false;
         }
+      });
+
+      function openCatModal() {
+        els.catErr.textContent = '';
+        els.catName.value = '';
+        els.catModal.hidden = false;
+        setTimeout(() => { try { els.catName.focus(); } catch (e) {} }, 30);
+      }
+
+      function closeCatModal() {
+        els.catModal.hidden = true;
+      }
+
+      async function createCategory(name) {
+        els.catErr.textContent = '保存中…';
+        try {
+          if (!state.pwd) {
+            const p = prompt('请输入站点密码');
+            if (!p) { els.catErr.textContent = ''; return; }
+            state.pwd = p;
+            localStorage.setItem('cn_pwd', p);
+          }
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) {
+            state.pwd = '';
+            localStorage.removeItem('cn_pwd');
+            els.catErr.textContent = '密码错误，请重试';
+            return;
+          }
+          if (!res.ok) { els.catErr.textContent = '读取失败：' + res.status; return; }
+          const data = await res.json();
+          const cats = Array.isArray(data.categories) ? data.categories : [];
+          if (cats.some((c) => (c.name || '').trim() === name)) {
+            els.catErr.textContent = '同名分类已存在';
+            return;
+          }
+          cats.push({ id: 'cat_' + Date.now().toString(36), name, icon: 'Folder' });
+          data.categories = cats;
+          const save = await fetch('/api/storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(data)
+          });
+          if (!save.ok) { els.catErr.textContent = '保存失败：' + save.status; return; }
+          state.categories = cats;
+          closeCatModal();
+          renderChips();
+          renderCards(false);
+          alert('已创建分类：' + name);
+        } catch (e) {
+          els.catErr.textContent = '网络错误：' + e.message;
+        }
+      }
+
+      els.addCatBtn.addEventListener('click', openCatModal);
+      els.catCancel.addEventListener('click', closeCatModal);
+      els.catForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = els.catName.value.trim();
+        if (!name) { els.catErr.textContent = '请输入分类名称'; return; }
+        if (name.length > 20) { els.catErr.textContent = '名称最多 20 个字'; return; }
+        createCategory(name);
+      });
+
+      function openMoveModal(id) {
+        const link = state.links.find((l) => l.id === id);
+        if (!link) return;
+        state.movingId = id;
+        els.moveErr.textContent = '';
+        els.moveLinkName.textContent = link.title || link.url;
+        els.moveTarget.innerHTML = state.categories
+          .map((c) => `<option value="${esc(c.id)}"${c.id === link.categoryId ? ' selected' : ''}>${esc(c.name)}</option>`)
+          .join('');
+        els.moveModal.hidden = false;
+        setTimeout(() => { try { els.moveTarget.focus(); } catch (e) {} }, 30);
+      }
+
+      function closeMoveModal() {
+        els.moveModal.hidden = true;
+      }
+
+      async function moveLinkById(id, targetId) {
+        if (!id || !targetId) return;
+        const useModal = !els.moveModal.hidden;
+        const showErr = (m) => { if (useModal) { els.moveErr.textContent = m; } else { alert(m); } };
+        if (useModal) els.moveErr.textContent = '保存中…';
+        try {
+          if (!state.pwd) {
+            const p = prompt('请输入站点密码');
+            if (!p) { if (useModal) els.moveErr.textContent = ''; return; }
+            state.pwd = p;
+            localStorage.setItem('cn_pwd', p);
+          }
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) {
+            state.pwd = '';
+            localStorage.removeItem('cn_pwd');
+            showErr('密码错误，请重试');
+            return;
+          }
+          if (!res.ok) { showErr('读取失败：' + res.status); return; }
+          const data = await res.json();
+          const link = (data.links || []).find((l) => l.id === id);
+          if (!link) { showErr('找不到该链接，请刷新后重试'); return; }
+          if (link.categoryId === targetId) { if (useModal) closeMoveModal(); return; }
+          link.categoryId = targetId;
+          const save = await fetch('/api/storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(data)
+          });
+          if (!save.ok) { showErr('保存失败：' + save.status); return; }
+          const local = state.links.find((l) => l.id === id);
+          if (local) local.categoryId = targetId;
+          if (useModal) closeMoveModal();
+          renderChips();
+          renderCards(false);
+        } catch (e) {
+          showErr('网络错误：' + e.message);
+        }
+      }
+
+      function moveLink(targetId) {
+        moveLinkById(state.movingId, targetId);
+      }
+
+      async function deleteLink(id) {
+        const link = state.links.find((l) => l.id === id);
+        if (!link) return;
+        if (!confirm('确认删除「' + (link.title || link.url) + '」？')) return;
+        try {
+          if (!state.pwd) {
+            const p = prompt('请输入站点密码');
+            if (!p) return;
+            state.pwd = p;
+            localStorage.setItem('cn_pwd', p);
+          }
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) {
+            state.pwd = '';
+            localStorage.removeItem('cn_pwd');
+            alert('密码错误，请重试');
+            return;
+          }
+          if (!res.ok) { alert('读取失败：' + res.status); return; }
+          const data = await res.json();
+          const before = (data.links || []).length;
+          data.links = (data.links || []).filter((l) => l.id !== id);
+          if (data.links.length === before) { alert('找不到该链接，请刷新后重试'); return; }
+          const save = await fetch('/api/storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(data)
+          });
+          if (!save.ok) { alert('保存失败：' + save.status); return; }
+          state.links = state.links.filter((l) => l.id !== id);
+          renderChips();
+          renderCards(false);
+        } catch (e) {
+          alert('网络错误：' + e.message);
+        }
+      }
+
+      els.moveCancel.addEventListener('click', closeMoveModal);
+      els.moveForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        moveLink(els.moveTarget.value);
+      });
+
+      // 拖拽：把卡片拖到顶部分类标签上即可移动
+      els.grid.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('.card');
+        if (!card) return;
+        e.dataTransfer.setData('text/plain', card.dataset.id);
+        e.dataTransfer.effectAllowed = 'move';
+        card.classList.add('dragging');
+      });
+
+      els.grid.addEventListener('dragend', () => {
+        document.querySelectorAll('.card.dragging').forEach((c) => c.classList.remove('dragging'));
+        document.querySelectorAll('.chip.drop-over').forEach((c) => c.classList.remove('drop-over'));
+      });
+
+      els.chips.addEventListener('dragover', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip || chip.dataset.id === 'all') return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        chip.classList.add('drop-over');
+      });
+
+      els.chips.addEventListener('dragleave', (e) => {
+        const chip = e.target.closest('.chip');
+        if (chip) chip.classList.remove('drop-over');
+      });
+
+      els.chips.addEventListener('drop', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip || chip.dataset.id === 'all') return;
+        e.preventDefault();
+        chip.classList.remove('drop-over');
+        const id = e.dataTransfer.getData('text/plain');
+        if (id) moveLinkById(id, chip.dataset.id);
+      });
+
+      function openRenameModal(id) {
+        const cat = state.categories.find((c) => c.id === id);
+        if (!cat) return;
+        els.renameErr.textContent = '';
+        els.renameName.value = cat.name || '';
+        els.renameModal.dataset.id = id;
+        els.renameModal.hidden = false;
+        setTimeout(() => { try { els.renameName.focus(); els.renameName.select(); } catch (e) {} }, 30);
+      }
+
+      function closeRenameModal() {
+        els.renameModal.hidden = true;
+      }
+
+      async function renameCategory(id, name) {
+        els.renameErr.textContent = '保存中…';
+        try {
+          if (!state.pwd) {
+            const p = prompt('请输入站点密码');
+            if (!p) { els.renameErr.textContent = ''; return; }
+            state.pwd = p;
+            localStorage.setItem('cn_pwd', p);
+          }
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) {
+            state.pwd = '';
+            localStorage.removeItem('cn_pwd');
+            els.renameErr.textContent = '密码错误，请重试';
+            return;
+          }
+          if (!res.ok) { els.renameErr.textContent = '读取失败：' + res.status; return; }
+          const data = await res.json();
+          const cats = Array.isArray(data.categories) ? data.categories : [];
+          if (cats.some((c) => c.id !== id && (c.name || '').trim() === name)) {
+            els.renameErr.textContent = '已有同名分类';
+            return;
+          }
+          const cat = cats.find((c) => c.id === id);
+          if (!cat) { els.renameErr.textContent = '找不到该分类，请刷新后重试'; return; }
+          cat.name = name;
+          data.categories = cats;
+          const save = await fetch('/api/storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(data)
+          });
+          if (!save.ok) { els.renameErr.textContent = '保存失败：' + save.status; return; }
+          state.categories = cats;
+          closeRenameModal();
+          renderChips();
+          renderCards(false);
+        } catch (e) {
+          els.renameErr.textContent = '网络错误：' + e.message;
+        }
+      }
+
+      els.chips.addEventListener('dblclick', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip) return;
+        if (chip.dataset.id === 'all') return;
+        openRenameModal(chip.dataset.id);
+      });
+
+      els.renameCancel.addEventListener('click', closeRenameModal);
+      els.renameForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = els.renameName.value.trim();
+        if (!name) { els.renameErr.textContent = '请输入名称'; return; }
+        if (name.length > 20) { els.renameErr.textContent = '名称最多 20 个字'; return; }
+        renameCategory(els.renameModal.dataset.id, name);
+      });
+
+      async function deleteCategory(id) {
+        const cat = state.categories.find((c) => c.id === id);
+        if (!cat) return;
+        const n = state.links.filter((l) => l.categoryId === id).length;
+        if (n > 0) {
+          els.renameErr.textContent = '该分类下还有 ' + n + ' 条书签，请先移到其他分类';
+          return;
+        }
+        if (!confirm('确认删除分类「' + cat.name + '」？')) return;
+        els.renameErr.textContent = '删除中…';
+        try {
+          if (!state.pwd) {
+            const p = prompt('请输入站点密码');
+            if (!p) { els.renameErr.textContent = ''; return; }
+            state.pwd = p;
+            localStorage.setItem('cn_pwd', p);
+          }
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) {
+            state.pwd = '';
+            localStorage.removeItem('cn_pwd');
+            els.renameErr.textContent = '密码错误，请重试';
+            return;
+          }
+          if (!res.ok) { els.renameErr.textContent = '读取失败：' + res.status; return; }
+          const data = await res.json();
+          const linked = (data.links || []).filter((l) => l.categoryId === id).length;
+          if (linked > 0) {
+            els.renameErr.textContent = '该分类下还有 ' + linked + ' 条书签，请先移走';
+            return;
+          }
+          data.categories = (data.categories || []).filter((c) => c.id !== id);
+          const save = await fetch('/api/storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(data)
+          });
+          if (!save.ok) { els.renameErr.textContent = '保存失败：' + save.status; return; }
+          state.categories = data.categories;
+          if (state.active === id) state.active = 'all';
+          closeRenameModal();
+          renderChips();
+          renderCards(false);
+        } catch (e) {
+          els.renameErr.textContent = '网络错误：' + e.message;
+        }
+      }
+
+      els.renameDelete.addEventListener('click', () => deleteCategory(els.renameModal.dataset.id));
+
+      els.grid.addEventListener('click', (e) => {
+        const del = e.target.closest('.del');
+        if (del) { deleteLink(del.dataset.id); return; }
+        const mv = e.target.closest('.move');
+        if (mv) { openMoveModal(mv.dataset.id); return; }
+        if (e.target.closest('a')) return;
+        const card = e.target.closest('.card');
+        if (card && card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener');
+      });
+
+      els.grid.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('a,button')) return;
+        const card = e.target.closest('.card');
+        if (card && card.dataset.url) { e.preventDefault(); window.open(card.dataset.url, '_blank', 'noopener'); }
       });
 
       els.exportBtn.addEventListener('click', async () => {
