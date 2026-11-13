@@ -1026,7 +1026,15 @@
       els.chips.addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');
         if (!chip) return;
-        state.active = chip.dataset.id || 'all';
+        const id = chip.dataset.id || 'all';
+        const now = Date.now();
+        if (id !== 'all' && lastChipClick.id === id && now - lastChipClick.t < 450) {
+          lastChipClick = { id: null, t: 0 };
+          openRenameModal(id);
+          return;
+        }
+        lastChipClick = { id, t: now };
+        state.active = id;
         renderChips();
         renderCards(false);
       });
@@ -1248,6 +1256,8 @@
         moveLink(els.moveTarget.value);
       });
 
+      let lastChipClick = { id: null, t: 0 };
+
       // 拖拽：把卡片拖到顶部分类标签上即可移动
       els.grid.addEventListener('dragstart', (e) => {
         const card = e.target.closest('.card');
@@ -1339,13 +1349,6 @@
           els.renameErr.textContent = '网络错误：' + e.message;
         }
       }
-
-      els.chips.addEventListener('dblclick', (e) => {
-        const chip = e.target.closest('.chip');
-        if (!chip) return;
-        if (chip.dataset.id === 'all') return;
-        openRenameModal(chip.dataset.id);
-      });
 
       els.renameCancel.addEventListener('click', closeRenameModal);
       els.renameForm.addEventListener('submit', (e) => {
