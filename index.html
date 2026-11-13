@@ -294,6 +294,7 @@
       }
 
       .card {
+        position: relative;
         display: flex;
         gap: 12px;
         align-items: flex-start;
@@ -305,6 +306,22 @@
         color: inherit;
         /* 动效仅此一处：hover 上浮 + 边框提亮 */
         transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      }
+
+      .card.selected {
+        border-color: var(--line-strong);
+        background: rgba(165, 180, 252, 0.10);
+      }
+
+      .sel {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 15px;
+        height: 15px;
+        accent-color: #818cf8;
+        cursor: pointer;
+        z-index: 2;
       }
 
       .card:hover {
@@ -456,6 +473,78 @@
 
       .del:hover { color: #fda4af; border-color: rgba(253, 164, 175, 0.5); }
 
+      .edit {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--muted);
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+      }
+
+      .edit:hover { color: var(--fg); border-color: var(--line-strong); }
+
+      .chip[draggable="true"] { cursor: grab; }
+
+      #batchBar {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        z-index: 40;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(13, 11, 30, 0.95);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        font-size: 12px;
+        color: var(--muted);
+        max-width: 92vw;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      #batchBar[hidden] { display: none; }
+
+      #batchBar b { color: var(--fg); font-weight: 600; }
+
+      .lc textarea {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--fg);
+        font-size: 14px;
+        outline: none;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 76px;
+      }
+
+      .lc textarea:focus {
+        border-color: var(--line-strong);
+        box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.12);
+      }
+
+      .chk {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .chk input { width: 15px; height: 15px; accent-color: #818cf8; }
+
       .card:focus-visible {
         outline: 2px solid var(--line-strong);
         outline-offset: 2px;
@@ -470,6 +559,8 @@
         outline: 2px dashed var(--line-strong);
         outline-offset: 2px;
       }
+
+      .chip.dragging { opacity: 0.45; }
 
       .card:hover .go {
         border-color: var(--line-strong);
@@ -486,7 +577,9 @@
       #login,
       #catModal,
       #moveModal,
-      #renameModal {
+      #renameModal,
+      #linkModal,
+      #batchMoveModal {
         position: fixed;
         inset: 0;
         z-index: 50;
@@ -501,7 +594,9 @@
       #login[hidden],
       #catModal[hidden],
       #moveModal[hidden],
-      #renameModal[hidden] { display: none; }
+      #renameModal[hidden],
+      #linkModal[hidden],
+      #batchMoveModal[hidden] { display: none; }
 
       .lc {
         width: min(360px, 88vw);
@@ -583,6 +678,15 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           <span class="lbl">分类</span>
         </button>
+        <button class="btn" id="addLinkBtn" type="button" title="添加书签">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          <span class="lbl">书签</span>
+        </button>
+        <button class="btn" id="importBtn" type="button" title="导入 Chrome 书签 HTML">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <span class="lbl">导入</span>
+        </button>
+        <input id="importFile" type="file" accept=".html,.htm,text/html" hidden />
       </div>
       <nav class="chips-wrap">
         <button class="scrolly l" id="chipsLeft" type="button" aria-label="向左滚动分类" title="向左">
@@ -651,6 +755,43 @@
       </form>
     </div>
 
+    <div id="linkModal" hidden>
+      <form class="lc" id="linkForm" autocomplete="off">
+        <h2 id="linkFormTitle">添加书签</h2>
+        <input id="linkTitleInput" maxlength="80" placeholder="标题" />
+        <input id="linkUrlInput" placeholder="网址 https://..." inputmode="url" />
+        <select id="linkCatSelect"></select>
+        <textarea id="linkDescInput" maxlength="80" placeholder="描述（≤80 字：为什么存 / 什么时候用）"></textarea>
+        <input id="linkTagsInput" placeholder="标签，逗号分隔（可选）" />
+        <label class="chk"><input type="checkbox" id="linkPinned" /> 置顶显示</label>
+        <div class="err" id="linkErr"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" id="linkCancel" type="button">取消</button>
+          <button class="btn" id="linkSave" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="batchMoveModal" hidden>
+      <form class="lc" id="batchMoveForm">
+        <h2>批量移动到分类</h2>
+        <p id="batchMoveInfo"></p>
+        <select id="batchMoveTarget"></select>
+        <div class="err" id="batchMoveErr"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" id="batchMoveCancel" type="button">取消</button>
+          <button class="btn" type="submit">移动</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="batchBar" hidden>
+      <span>已选 <b id="selCount">0</b> 条</span>
+      <button class="btn" id="batchMoveBtn" type="button">移动</button>
+      <button class="btn danger" id="batchDeleteBtn" type="button">删除</button>
+      <button class="btn" id="batchClearBtn" type="button">取消选择</button>
+    </div>
+
     <script type="module">
       const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -660,6 +801,8 @@
         active: 'all',
         q: '',
         movingId: null,
+        editingId: null,
+        selected: new Set(),
         pwd: localStorage.getItem('cn_pwd') || '',
         issued: localStorage.getItem('cn_pwd_at') || ''
       };
@@ -697,7 +840,32 @@
         renameName: $('#renameName'),
         renameErr: $('#renameErr'),
         renameCancel: $('#renameCancel'),
-        renameDelete: $('#renameDelete')
+        renameDelete: $('#renameDelete'),
+        addLinkBtn: $('#addLinkBtn'),
+        importBtn: $('#importBtn'),
+        importFile: $('#importFile'),
+        linkModal: $('#linkModal'),
+        linkForm: $('#linkForm'),
+        linkFormTitle: $('#linkFormTitle'),
+        linkTitleInput: $('#linkTitleInput'),
+        linkUrlInput: $('#linkUrlInput'),
+        linkCatSelect: $('#linkCatSelect'),
+        linkDescInput: $('#linkDescInput'),
+        linkTagsInput: $('#linkTagsInput'),
+        linkPinned: $('#linkPinned'),
+        linkErr: $('#linkErr'),
+        linkCancel: $('#linkCancel'),
+        batchBar: $('#batchBar'),
+        selCount: $('#selCount'),
+        batchMoveBtn: $('#batchMoveBtn'),
+        batchDeleteBtn: $('#batchDeleteBtn'),
+        batchClearBtn: $('#batchClearBtn'),
+        batchMoveModal: $('#batchMoveModal'),
+        batchMoveForm: $('#batchMoveForm'),
+        batchMoveTarget: $('#batchMoveTarget'),
+        batchMoveInfo: $('#batchMoveInfo'),
+        batchMoveErr: $('#batchMoveErr'),
+        batchMoveCancel: $('#batchMoveCancel')
       };
 
       const esc = (s) =>
@@ -750,6 +918,7 @@
           const data = await res.json();
           state.links = Array.isArray(data.links) ? data.links : [];
           state.categories = Array.isArray(data.categories) ? data.categories : [];
+          state.selected.clear();
           hideLogin();
           renderChips();
           renderCards(false);
@@ -768,8 +937,9 @@
         els.chips.innerHTML = items
           .map((c) => {
             const on = state.active === c.id ? ' on' : '';
-            const title = c.id === 'all' ? '' : ' title="双击可重命名"';
-            return `<button class="chip${on}" data-id="${esc(c.id)}" type="button"${title}>${esc(c.name)}<span class="n">${c.n}</span></button>`;
+            const title = c.id === 'all' ? '' : ' title="双击重命名，拖动排序"';
+            const drag = c.id === 'all' ? '' : ' draggable="true"';
+            return `<button class="chip${on}" data-id="${esc(c.id)}" type="button"${title}${drag}>${esc(c.name)}<span class="n">${c.n}</span></button>`;
           })
           .join('');
         requestAnimationFrame(updateScrollButtons);
@@ -788,7 +958,8 @@
           ...(Array.isArray(link.tags) ? link.tags.map((t) => `<span class="tag">${esc(t)}</span>`) : []),
           link.pinned ? `<span class="tag">置顶</span>` : ''
         ].filter(Boolean).join('');
-        return `<div class="card${animate ? ' filter-in' : ''}" data-url="${esc(link.url)}" data-id="${esc(link.id)}" tabindex="0" role="link" draggable="true">
+        return `<div class="card${animate ? ' filter-in' : ''}${state.selected.has(link.id) ? ' selected' : ''}" data-url="${esc(link.url)}" data-id="${esc(link.id)}" tabindex="0" role="link" draggable="true">
+          <input class="sel" type="checkbox" data-id="${esc(link.id)}"${state.selected.has(link.id) ? ' checked' : ''} aria-label="选择" />
           <div class="ico">${img}<span class="fb" style="${icon ? 'display:none' : 'display:flex'}">${esc(ch)}</span></div>
           <div class="body">
             <div class="t">${esc(link.title || link.url)}</div>
@@ -797,6 +968,7 @@
             <div class="tags">${tags}
               <span class="tools">
                 <a class="go" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">直达 →</a>
+                <button class="edit" type="button" data-id="${esc(link.id)}">编辑</button>
                 <button class="move" type="button" data-id="${esc(link.id)}">移动</button>
                 <button class="del" type="button" data-id="${esc(link.id)}">删除</button>
               </span>
@@ -819,6 +991,8 @@
 
         els.clear.style.display = state.q ? 'block' : 'none';
 
+        visible.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
         const catName =
           state.active === 'all'
             ? '全部'
@@ -833,6 +1007,7 @@
 
         els.empty.hidden = true;
         els.grid.innerHTML = visible.map((l) => cardHtml(l, animate)).join('');
+        renderBatchBar();
       }
 
       // 搜索：实时过滤（唯一允许的过滤动效）
@@ -1232,6 +1407,9 @@
       els.renameDelete.addEventListener('click', () => deleteCategory(els.renameModal.dataset.id));
 
       els.grid.addEventListener('click', (e) => {
+        if (e.target.closest('.sel')) return;
+        const ed = e.target.closest('.edit');
+        if (ed) { openLinkModal(state.links.find((l) => l.id === ed.dataset.id) || null); return; }
         const del = e.target.closest('.del');
         if (del) { deleteLink(del.dataset.id); return; }
         const mv = e.target.closest('.move');
@@ -1241,11 +1419,266 @@
         if (card && card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener');
       });
 
+      els.grid.addEventListener('change', (e) => {
+        const cb = e.target.closest('.sel');
+        if (!cb) return;
+        const id = cb.dataset.id;
+        if (cb.checked) state.selected.add(id); else state.selected.delete(id);
+        const card = cb.closest('.card');
+        if (card) card.classList.toggle('selected', cb.checked);
+        renderBatchBar();
+      });
+
       els.grid.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         if (e.target.closest('a,button')) return;
         const card = e.target.closest('.card');
         if (card && card.dataset.url) { e.preventDefault(); window.open(card.dataset.url, '_blank', 'noopener'); }
+      });
+
+      function renderBatchBar() {
+        const n = state.selected.size;
+        els.batchBar.hidden = n === 0;
+        els.selCount.textContent = String(n);
+      }
+
+      async function withData(mutator) {
+        if (!state.pwd) {
+          const p = prompt('请输入站点密码');
+          if (!p) return false;
+          state.pwd = p;
+          localStorage.setItem('cn_pwd', p);
+        }
+        try {
+          const res = await fetch('/api/storage', { headers: authHeaders() });
+          if (res.status === 401) {
+            state.pwd = '';
+            localStorage.removeItem('cn_pwd');
+            showLogin('密码错误或已过期，请重新输入');
+            return false;
+          }
+          if (!res.ok) { alert('读取失败：' + res.status); return false; }
+          const data = await res.json();
+          await mutator(data);
+          const save = await fetch('/api/storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(data)
+          });
+          if (!save.ok) { alert('保存失败：' + save.status); return false; }
+          await load();
+          return true;
+        } catch (e) {
+          alert('网络错误：' + e.message);
+          return false;
+        }
+      }
+
+      function openLinkModal(link) {
+        state.editingId = link ? link.id : null;
+        els.linkFormTitle.textContent = link ? '编辑书签' : '添加书签';
+        els.linkErr.textContent = '';
+        els.linkTitleInput.value = link ? (link.title || '') : '';
+        els.linkUrlInput.value = link ? (link.url || '') : '';
+        els.linkDescInput.value = link ? (link.description || '') : '';
+        els.linkTagsInput.value = link && Array.isArray(link.tags) ? link.tags.join('，') : '';
+        els.linkPinned.checked = !!(link && link.pinned);
+        els.linkCatSelect.innerHTML = state.categories
+          .map((c) => `<option value="${esc(c.id)}"${link && link.categoryId === c.id ? ' selected' : ''}>${esc(c.name)}</option>`)
+          .join('');
+        if (!link) {
+          const fallback = state.active !== 'all' ? state.active : (state.categories[0] || {}).id;
+          if (fallback) els.linkCatSelect.value = fallback;
+        }
+        els.linkModal.hidden = false;
+        setTimeout(() => { try { els.linkTitleInput.focus(); } catch (e) {} }, 30);
+      }
+
+      function closeLinkModal() {
+        els.linkModal.hidden = true;
+      }
+
+      function parseTags(raw) {
+        return String(raw || '')
+          .split(/[,，、;；\s]+/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .slice(0, 3);
+      }
+
+      async function saveLinkForm() {
+        const title = els.linkTitleInput.value.trim();
+        const url = els.linkUrlInput.value.trim();
+        const description = els.linkDescInput.value.trim().slice(0, 80);
+        const tags = parseTags(els.linkTagsInput.value);
+        const categoryId = els.linkCatSelect.value;
+        const pinned = els.linkPinned.checked;
+        if (!title) { els.linkErr.textContent = '请填写标题'; return; }
+        if (!/^https?:\/\//i.test(url)) { els.linkErr.textContent = '网址必须以 http:// 或 https:// 开头'; return; }
+        if (!categoryId) { els.linkErr.textContent = '请先创建分类'; return; }
+        els.linkErr.textContent = '保存中…';
+        const editingId = state.editingId;
+        const ok = await withData((data) => {
+          const links = data.links || [];
+          if (editingId) {
+            const item = links.find((l) => l.id === editingId);
+            if (!item) return;
+            item.title = title;
+            item.url = url;
+            item.description = description;
+            item.tags = tags;
+            item.categoryId = categoryId;
+            item.pinned = pinned;
+          } else {
+            links.unshift({
+              id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+              title,
+              url,
+              description,
+              tags,
+              categoryId,
+              pinned,
+              createdAt: Date.now()
+            });
+          }
+          data.links = links;
+        });
+        if (ok) { closeLinkModal(); } else { els.linkErr.textContent = '保存失败，请重试'; }
+      }
+
+      async function batchDelete() {
+        const ids = Array.from(state.selected);
+        if (!ids.length) return;
+        if (!confirm('确认删除选中的 ' + ids.length + ' 条书签？')) return;
+        await withData((data) => {
+          data.links = (data.links || []).filter((l) => !state.selected.has(l.id));
+        });
+        state.selected.clear();
+        renderBatchBar();
+      }
+
+      function openBatchMove() {
+        if (!state.selected.size) return;
+        els.batchMoveErr.textContent = '';
+        els.batchMoveInfo.textContent = '将移动 ' + state.selected.size + ' 条书签到：';
+        els.batchMoveTarget.innerHTML = state.categories
+          .map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`)
+          .join('');
+        els.batchMoveModal.hidden = false;
+      }
+
+      async function batchMoveTo(targetId) {
+        if (!targetId || !state.selected.size) return;
+        await withData((data) => {
+          (data.links || []).forEach((l) => { if (state.selected.has(l.id)) l.categoryId = targetId; });
+        });
+        state.selected.clear();
+        renderBatchBar();
+        els.batchMoveModal.hidden = true;
+      }
+
+      function parseBookmarkHtml(text) {
+        const doc = new DOMParser().parseFromString(text, 'text/html');
+        const out = [];
+        doc.querySelectorAll('a[href]').forEach((a) => {
+          const url = (a.getAttribute('href') || '').trim();
+          if (!/^https?:\/\//i.test(url)) return;
+          const title = (a.textContent || '').trim() || url;
+          out.push({ title, url });
+        });
+        return out;
+      }
+
+      async function importFile(file) {
+        const text = await file.text();
+        const items = parseBookmarkHtml(text);
+        if (!items.length) return alert('没有解析到有效书签（需要 http/https 链接）');
+        const target = state.active !== 'all' ? state.active : (state.categories[0] || {}).id;
+        if (!target) return alert('请先创建一个分类');
+        if (!confirm('解析到 ' + items.length + ' 条书签。\n将导入到当前分类，并自动跳过重复链接。继续？')) return;
+        const seen = new Set(state.links.map((l) => (l.url || '').replace(/\/$/, '').toLowerCase()));
+        let added = 0, skipped = 0;
+        await withData((data) => {
+          const links = data.links || [];
+          items.forEach((it, i) => {
+            const key = it.url.replace(/\/$/, '').toLowerCase();
+            if (seen.has(key)) { skipped++; return; }
+            seen.add(key);
+            links.push({
+              id: Date.now().toString(36) + i + Math.random().toString(36).slice(2, 5),
+              title: it.title,
+              url: it.url,
+              description: '',
+              tags: [],
+              categoryId: target,
+              pinned: false,
+              createdAt: Date.now()
+            });
+            added++;
+          });
+          data.links = links;
+        });
+        alert('导入完成：新增 ' + added + ' 条，跳过重复 ' + skipped + ' 条');
+      }
+
+      els.addLinkBtn.addEventListener('click', () => openLinkModal(null));
+      els.linkCancel.addEventListener('click', closeLinkModal);
+      els.linkForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveLinkForm();
+      });
+
+      els.batchMoveBtn.addEventListener('click', openBatchMove);
+      els.batchDeleteBtn.addEventListener('click', batchDelete);
+      els.batchClearBtn.addEventListener('click', () => {
+        state.selected.clear();
+        renderCards(false);
+      });
+      els.batchMoveCancel.addEventListener('click', () => { els.batchMoveModal.hidden = true; });
+      els.batchMoveForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        batchMoveTo(els.batchMoveTarget.value);
+      });
+
+      els.importBtn.addEventListener('click', () => els.importFile.click());
+      els.importFile.addEventListener('change', async () => {
+        const file = els.importFile.files && els.importFile.files[0];
+        els.importFile.value = '';
+        if (file) importFile(file);
+      });
+
+      // 分类拖拽排序（把分类标签拖动即可调整顺序）
+      let dragChipId = null;
+      els.chips.addEventListener('dragstart', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip || chip.dataset.id === 'all') { e.preventDefault(); return; }
+        dragChipId = chip.dataset.id;
+        e.dataTransfer.setData('text/cat', dragChipId);
+        e.dataTransfer.effectAllowed = 'move';
+        chip.classList.add('dragging');
+      });
+      els.chips.addEventListener('dragover', (e) => {
+        if (!dragChipId) return;
+        e.preventDefault();
+      });
+      els.chips.addEventListener('drop', async (e) => {
+        if (!dragChipId) return;
+        e.preventDefault();
+        const chip = e.target.closest('.chip');
+        const targetId = chip ? chip.dataset.id : null;
+        document.querySelectorAll('.chip').forEach((c) => c.classList.remove('dragging'));
+        const from = dragChipId;
+        dragChipId = null;
+        if (!targetId || targetId === from || targetId === 'all') return;
+        await withData((data) => {
+          const cats = data.categories || [];
+          const fromIdx = cats.findIndex((c) => c.id === from);
+          const toIdx = cats.findIndex((c) => c.id === targetId);
+          if (fromIdx < 0 || toIdx < 0) return;
+          const moved = cats.splice(fromIdx, 1)[0];
+          cats.splice(toIdx, 0, moved);
+          data.categories = cats;
+        });
       });
 
       els.exportBtn.addEventListener('click', async () => {
