@@ -885,6 +885,30 @@
         return h ? h.charAt(0).toUpperCase() : '书';
       }
 
+      // 读取 PNG data URI 的宽高（只解析文件头，够判断是否小图）
+      function dataIconSize(icon) {
+        if (!icon || !icon.startsWith('data:image/png')) return null;
+        try {
+          const b64 = icon.slice(icon.indexOf(',') + 1);
+          const bin = atob(b64.slice(0, 64));
+          const w = (bin.charCodeAt(16) << 24) | (bin.charCodeAt(17) << 16) | (bin.charCodeAt(18) << 8) | bin.charCodeAt(19);
+          const h = (bin.charCodeAt(20) << 24) | (bin.charCodeAt(21) << 16) | (bin.charCodeAt(22) << 8) | bin.charCodeAt(23);
+          return { w, h };
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function highResFavicon(domain) {
+        if (!domain) return '';
+        return 'https://www.faviconextractor.com/favicon/' + encodeURIComponent(domain) + '?larger=true';
+      }
+
+      function s2Favicon(domain) {
+        if (!domain) return '';
+        return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&sz=128';
+      }
+
       function authHeaders() {
         const h = {};
         if (state.pwd) h['x-auth-password'] = state.pwd;
@@ -948,9 +972,13 @@
       function cardHtml(link, animate) {
         const ch = fallbackChar(link);
         const h = host(link.url);
-        const icon = link.icon || (h ? 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(h) + '&sz=128' : '');
-        const img = icon
-          ? `<img src="${esc(icon)}" alt="" loading="lazy" decoding="async" onerror="this.remove();this.parentNode.querySelector('.fb').style.display='flex'">`
+        const stored = link.icon || '';
+        const size = dataIconSize(stored);
+        const storedOk = !!stored && (stored.startsWith('http') || (size && size.w >= 64));
+        const src = storedOk ? stored : (highResFavicon(h) || s2Favicon(h) || stored);
+        const s2 = storedOk ? '' : s2Favicon(h);
+        const img = src
+          ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" data-s2="${esc(s2)}">`
           : '';
         const cat = state.categories.find((c) => c.id === link.categoryId);
         const tags = [
@@ -960,7 +988,7 @@
         ].filter(Boolean).join('');
         return `<div class="card${animate ? ' filter-in' : ''}${state.selected.has(link.id) ? ' selected' : ''}" data-url="${esc(link.url)}" data-id="${esc(link.id)}" tabindex="0" role="link" draggable="true">
           <input class="sel" type="checkbox" data-id="${esc(link.id)}"${state.selected.has(link.id) ? ' checked' : ''} aria-label="选择" />
-          <div class="ico">${img}<span class="fb" style="${icon ? 'display:none' : 'display:flex'}">${esc(ch)}</span></div>
+          <div class="ico">${img}<span class="fb" style="${src ? 'display:none' : 'display:flex'}">${esc(ch)}</span></div>
           <div class="body">
             <div class="t">${esc(link.title || link.url)}</div>
             <div class="d">${esc(h)}</div>
@@ -1431,6 +1459,22 @@
         if (card) card.classList.toggle('selected', cb.checked);
         renderBatchBar();
       });
+
+      // 图标加载失败时：先降级 Google 128，再降级首字
+      els.grid.addEventListener('error', (e) => {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG') return;
+        const s2 = img.dataset.s2;
+        if (s2) {
+          img.dataset.s2 = '';
+          img.src = s2;
+          return;
+        }
+        const ico = img.parentNode;
+        const fb = ico ? ico.querySelector('.fb') : null;
+        img.remove();
+        if (fb) fb.style.display = 'flex';
+      }, true);
 
       els.grid.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
